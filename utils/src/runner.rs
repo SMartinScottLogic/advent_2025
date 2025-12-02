@@ -98,21 +98,13 @@ where
     );
     span!(Level::INFO, "part1").in_scope(|| {
         match &solution.answer_part1(is_full).context("part1 failed") {
-            Ok(r) => info!(
-                "{}part1 answer is {}",
-                Paint::mask("🎅 "),
-                Paint::bold(&Paint::red(r))
-            ),
+            Ok(r) => info!("{}part1 answer is {}", Paint::mask("🎅 "), r),
             Err(e) => error!("{}part1 failed: {}", Paint::mask("🎅 "), e),
         }
     });
     span!(Level::INFO, "part2").in_scope(|| {
         match &solution.answer_part2(is_full).context("part2 failed") {
-            Ok(r) => info!(
-                "{}part2 answer is {}",
-                Paint::mask("🎅 "),
-                Paint::bold(&Paint::red(r))
-            ),
+            Ok(r) => info!("{}part2 answer is {}", Paint::mask("🎅 "), r),
             Err(e) => error!("{}part2 failed: {}", Paint::mask("🎅 "), e),
         }
     });
