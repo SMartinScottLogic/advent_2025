@@ -60,7 +60,8 @@ impl utils::Solution for Solution {
                     .chars()
                     .map(|c| c.to_digit(10).unwrap() as i64)
                     .collect::<Vec<_>>();
-                get_best(&bank, 12, &mut HashMap::new()).unwrap()
+                get_best_v2(&bank, 12)
+                //get_best(&bank, 12, &mut HashMap::new()).unwrap()
             })
             .sum();
         Ok(r as ResultType)
@@ -92,4 +93,57 @@ fn get_best(bank: &[i64], digits: usize, memo: &mut HashMap<(usize, usize), i64>
     }
     memo.insert((bank.len(), digits), max.unwrap());
     max
+}
+
+fn get_best_v2(bank: &[i64], digits: usize) -> i64 {
+    let mut max = 0;
+    let mut start = 0;
+    let mut digits = digits;
+    loop {
+        let (pos, v) = [9, 8, 7, 6, 5, 4, 3, 2, 1, 0]
+            .iter()
+            .flat_map(|v| {
+                bank[start..=bank.len() - digits]
+                    .iter()
+                    .enumerate()
+                    .find(|(p, c)| *c == v)
+            })
+            .next()
+            .unwrap();
+        max *= 10;
+        max += v;
+        digits -= 1;
+        start = pos + start + 1;
+        debug!(start, v, digits);
+        if digits == 0 {
+            break;
+        }
+    }
+    max
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use std::io::BufReader;
+
+    use tracing_test::traced_test;
+    use utils::Solution;
+
+    #[test]
+    #[traced_test]
+    fn read() {
+        for (s, e) in [
+            ("987654321111111", 98),
+            ("811111111111119", 89),
+            ("234234234234278", 78),
+            ("818181911112111", 92),
+        ] {
+            let bank = s
+                .chars()
+                .map(|c| c.to_digit(10).unwrap() as i64)
+                .collect::<Vec<_>>();
+            assert_eq!(get_best_v2(&bank, 2), e);
+        }
+    }
 }
