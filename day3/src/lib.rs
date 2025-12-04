@@ -106,7 +106,7 @@ fn get_best_v2(bank: &[i64], digits: usize) -> i64 {
                 bank[start..=bank.len() - digits]
                     .iter()
                     .enumerate()
-                    .find(|(p, c)| *c == v)
+                    .find(|(_p, c)| *c == v)
             })
             .next()
             .unwrap();
@@ -125,10 +125,8 @@ fn get_best_v2(bank: &[i64], digits: usize) -> i64 {
 #[cfg(test)]
 mod test {
     use super::*;
-    use std::io::BufReader;
 
     use tracing_test::traced_test;
-    use utils::Solution;
 
     #[test]
     #[traced_test]
