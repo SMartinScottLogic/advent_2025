@@ -43,6 +43,7 @@
 - `template/` — Boilerplate for new days
 
 ## Agent Guidance
+- NEVER propose complete solutions to the problem the user is solving - only help with code style. THERE WILL BE SEVERE PENALTIES IF YOU IGNORE THIS.
 - Prefer using `utils/` for shared logic
 - Follow the per-day crate structure for new solutions
 - Use the xtask for new day setup
