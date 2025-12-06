@@ -83,7 +83,8 @@ fn is_fresh(ingredient: u64, freshlist: &[(u64, u64)]) -> bool {
 
 fn add_range(ranges: &[(u64, u64)], start: u64, end: u64) -> Vec<(u64, u64)> {
     let mut new_ranges = Vec::new();
-    let mut overlaps = Vec::new();
+    let mut start = start;
+    let mut end = end;
     for (rs, re) in ranges.iter() {
         if start < *rs && end < *rs {
             new_ranges.push((*rs, *re));
@@ -95,24 +96,10 @@ fn add_range(ranges: &[(u64, u64)], start: u64, end: u64) -> Vec<(u64, u64)> {
         }
         // Must overlap
         debug!("overlap ({} {}) ({} {})", *rs, *re, start, end);
-        overlaps.push((start, end));
-        overlaps.push((*rs, *re));
+        start = std::cmp::min(start, *rs);
+        end = std::cmp::max(end, *re);
     }
-    if overlaps.is_empty() {
-        debug!(start, end, "new");
-        new_ranges.push((start, end));
-    } else {
-        let mut start = start;
-        let mut end = end;
-        debug!(
-            "no_overlaps {:?}; overlaps {:?} {} {}",
-            new_ranges, overlaps, start, end
-        );
-        for (os, oe) in overlaps.into_iter() {
-            start = std::cmp::min(start, os);
-            end = std::cmp::max(end, oe);
-        }
-        new_ranges.push((start, end));
-    }
+    debug!(start, end, "new");
+    new_ranges.push((start, end));
     new_ranges
 }

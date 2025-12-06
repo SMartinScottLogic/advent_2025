@@ -211,6 +211,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "day6"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "itertools",
+ "lazy_static",
+ "memoize",
+ "pathfinding",
+ "regex",
+ "tracing",
+ "tracing-test",
+ "utils",
+]
+
+[[package]]
 name = "deprecate-until"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
