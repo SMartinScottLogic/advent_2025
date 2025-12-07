@@ -1,8 +1,8 @@
 use std::cmp::{max, min};
 use std::collections::HashMap;
-use std::fmt::Display;
+use std::fmt::{Debug, Display};
 
-#[derive(Debug, Default, Clone)]
+#[derive(Default, Clone)]
 //TODO #[deprecated(since="0.5.0", note="please use `Grid` instead")]
 pub struct Matrix<T> {
     data: HashMap<(isize, isize), T>,
@@ -10,6 +10,18 @@ pub struct Matrix<T> {
     max_y: isize,
     min_x: isize,
     min_y: isize,
+}
+impl<T> Debug for Matrix<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Matrix")
+            // No point in ever dumping this data
+            //.field("data", &self.data)
+            .field("max_x", &self.max_x)
+            .field("max_y", &self.max_y)
+            .field("min_x", &self.min_x)
+            .field("min_y", &self.min_y)
+            .finish()
+    }
 }
 
 impl<T> Matrix<T>
@@ -89,7 +101,7 @@ where
         }
     }
 
-    pub fn sparse_iter(&self) -> std::collections::hash_map::Iter<(isize, isize), T> {
+    pub fn sparse_iter(&'_ self) -> std::collections::hash_map::Iter<'_, (isize, isize), T> {
         self.data.iter()
     }
 }
