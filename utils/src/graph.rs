@@ -149,7 +149,7 @@ type Graph<'a, N> = HashMap<N, HashSet<N>>;
 type NodeSet<N> = HashSet<N>;
 
 /**
-https://en.wikipedia.org/wiki/Bron%E2%80%93Kerbosch_algorithm
+<https://en.wikipedia.org/wiki/Bron%E2%80%93Kerbosch_algorithm>
 
 In computer science, the Bron–Kerbosch algorithm is an enumeration algorithm for finding all
 maximal cliques in an undirected graph. That is, it lists all subsets of vertices with the

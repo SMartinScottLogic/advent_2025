@@ -1,5 +1,5 @@
+use memoize::memoize;
 use std::{
-    collections::{HashMap, HashSet, VecDeque},
     fmt::Debug,
     io::{BufRead, BufReader},
 };
@@ -51,13 +51,12 @@ impl utils::Solution for Solution {
             }
         }
 
-        let num_splits = num_splits(&self.manifold, start_x, start_y);
-
+        let num_splits = num_splits_path(&self.manifold, start_x, start_y);
         // Implement for problem
         Ok(num_splits as ResultType)
     }
 
-    fn answer_part2(&self, _is_full: bool) -> Self::Result {
+    fn answer_part2(&self, is_full: bool) -> Self::Result {
         // Implement for problem
         let (maxx, maxy) = self.manifold.dimensions();
         let mut start_x = -1;
@@ -70,67 +69,37 @@ impl utils::Solution for Solution {
                 }
             }
         }
-        let r = num_timelines(&mut HashMap::new(), &self.manifold, start_x, start_y);
+        let r = num_timelines(&self.manifold, is_full, start_x, start_y);
         Ok(r as ResultType)
     }
 }
 
-fn num_splits(manifold: &Matrix<char>, pos_x: isize, pos_y: isize) -> usize {
-    let mut queue = VecDeque::new();
-    let mut has_seen = HashSet::new();
-    let mut splitters = HashSet::new();
-    queue.push_back((pos_x, pos_y));
-    while let Some((px, py)) = queue.pop_front() {
-        match manifold.get(px, py) {
-            Some('S') => queue.push_back((px, py + 1)),
-            Some('.') => {
-                if has_seen.contains(&(px, py + 1)) {
-                    continue;
-                }
-
-                queue.push_back((px, py + 1));
-                has_seen.insert((px, py + 1));
-            }
-            Some('^') => {
-                if !has_seen.contains(&(px - 1, py + 1)) {
-                    queue.push_back((px - 1, py + 1));
-                }
-                if !has_seen.contains(&(px + 1, py + 1)) {
-                    queue.push_back((px + 1, py + 1));
-                }
-
-                splitters.insert((px, py));
-            }
-            None => {}
-            Some(c) => panic!("Some({})", c),
-        }
-    }
-    debug!(num_splits = debug(splitters.len()));
-    splitters.len()
+fn num_splits_path(manifold: &Matrix<char>, pos_x: isize, pos_y: isize) -> usize {
+    pathfinding::directed::bfs::bfs_reach((pos_x, pos_y), |(x, y)| match manifold.get(*x, *y) {
+        None => vec![],
+        Some('S') => vec![(*x, y + 1)],
+        Some('.') => vec![(*x, y + 1)],
+        Some('^') => vec![(x - 1, y + 1), (x + 1, y + 1)],
+        Some(c) => panic!("Some({})", c),
+    })
+    .filter(|(x, y)| manifold.get(*x, *y) == Some(&'^'))
+    .count()
 }
 
-fn num_timelines(
-    memo: &mut HashMap<(isize, isize), isize>,
-    manifold: &Matrix<char>,
-    pos_x: isize,
-    pos_y: isize,
-) -> isize {
-    if let Some(v) = memo.get(&(pos_x, pos_y)) {
-        return *v;
-    }
+#[memoize(Ignore:manifold)]
+fn num_timelines(manifold: &Matrix<char>, is_full: bool, pos_x: isize, pos_y: isize) -> isize {
     let count = match manifold.get(pos_x, pos_y) {
-        Some('S') => num_timelines(memo, manifold, pos_x, pos_y + 1),
-        Some('.') => num_timelines(memo, manifold, pos_x, pos_y + 1),
+        Some('S') => num_timelines(manifold, is_full, pos_x, pos_y + 1),
+        Some('.') => num_timelines(manifold, is_full, pos_x, pos_y + 1),
         Some('^') => {
             // Went left + right
             [pos_x - 1, pos_x + 1]
                 .iter()
-                .map(|&x| num_timelines(memo, manifold, x, pos_y + 1))
+                .map(|&x| num_timelines(manifold, is_full, x, pos_y + 1))
                 .sum()
         }
         None => 1,
         Some(c) => panic!("unknown: {}", c),
     };
-    memo.insert((pos_x, pos_y), count);
     count
 }
