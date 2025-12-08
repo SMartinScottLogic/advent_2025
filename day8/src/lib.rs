@@ -1,6 +1,7 @@
 use itertools::Itertools;
 use std::{
     collections::{HashMap, HashSet},
+    fmt::Debug,
     io::{BufRead, BufReader},
 };
 #[allow(unused_imports)]
@@ -8,9 +9,18 @@ use tracing::{debug, event_enabled, info, Level};
 
 pub type ResultType = u64;
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct Solution {
     junctionboxes: Vec<(i64, i64, i64)>,
+    distances: Vec<(usize, usize, i64)>,
+}
+impl Debug for Solution {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Solution")
+            .field("junctionboxes", &self.junctionboxes.len())
+            .field("distances", &self.distances.len())
+            .finish()
+    }
 }
 impl Solution {
     pub fn add_junctionbox(&mut self, x: i64, y: i64, z: i64) {
@@ -38,40 +48,29 @@ impl<T: std::io::Read> TryFrom<BufReader<T>> for Solution {
 }
 impl utils::Solution for Solution {
     type Result = anyhow::Result<ResultType>;
-    fn analyse(&mut self, _is_full: bool) {}
+    fn analyse(&mut self, _is_full: bool) {
+        self.distances = Vec::new();
+        for (i, (x1, y1, z1)) in self.junctionboxes.iter().enumerate() {
+            for (j, (x2, y2, z2)) in self.junctionboxes.iter().enumerate().take(i) {
+                if j >= i {
+                    panic!();
+                }
+                let distance = (x1 - x2).pow(2) + (y1 - y2).pow(2) + (z1 - z2).pow(2);
+                self.distances.push((i, j, distance));
+            }
+        }
+        self.distances.sort_by_key(|(_i, _j, distance)| -distance);
+    }
 
     fn answer_part1(&self, is_full: bool) -> Self::Result {
+        let mut distances = self.distances.clone();
+
         let limit = if is_full { 1000 } else { 10 };
         let mut connections = HashSet::new();
 
-        for connection_id in 0..limit {
-            let mut min_distance = None;
-            let mut best_pair = None;
-            for (i, (x1, y1, z1)) in self.junctionboxes.iter().enumerate() {
-                for (j, (x2, y2, z2)) in self.junctionboxes.iter().enumerate() {
-                    if j <= i {
-                        continue;
-                    }
-                    if connections.contains(&(i, j)) {
-                        continue;
-                    }
-                    let distance = (x1 - x2).pow(2) + (y1 - y2).pow(2) + (z1 - z2).pow(2);
-                    match min_distance {
-                        None => {
-                            min_distance = Some(distance);
-                            best_pair = Some((i, j));
-                        }
-                        Some(d) if d > distance => {
-                            min_distance = Some(distance);
-                            best_pair = Some((i, j));
-                        }
-                        Some(_) => {}
-                    }
-                }
-            }
-
-            debug!(connection_id, ?best_pair);
-            connections.insert(best_pair.unwrap());
+        for _ in 0..limit {
+            let (i, j, _distance) = distances.pop().unwrap();
+            connections.insert((i, j));
         }
         debug!(?connections);
 
@@ -106,10 +105,7 @@ impl utils::Solution for Solution {
                 group_id.insert(j, gid);
             }
         }
-        let mut groups_len = groups
-            .values()
-            .map(|group| group.len())
-            .collect::<Vec<_>>();
+        let mut groups_len = groups.values().map(|group| group.len()).collect::<Vec<_>>();
         groups_len.sort_by_key(|v| -(*v as isize));
         let r = groups_len.iter().take(3).product::<usize>();
         // Implement for problem
@@ -135,51 +131,26 @@ impl utils::Solution for Solution {
                 acc
             });
 
+        let mut distances = self.distances.clone();
+
         let mut last_ids;
         loop {
             // join closest unconnected pair
-            let mut min_distance = None;
-            let mut best_pair = None;
-            for (i, (x1, y1, z1)) in self.junctionboxes.iter().enumerate() {
-                for (j, (x2, y2, z2)) in self.junctionboxes.iter().enumerate() {
-                    if j <= i {
-                        continue;
-                    }
-                    let groupid_i = group_id.get(&i).unwrap();
-                    let groupid_j = group_id.get(&j).unwrap();
-                    if groupid_i == groupid_j {
-                        continue;
-                    }
-                    let distance = (x1 - x2).pow(2) + (y1 - y2).pow(2) + (z1 - z2).pow(2);
-                    match min_distance {
-                        None => {
-                            min_distance = Some(distance);
-                            best_pair = Some((i, j));
-                        }
-                        Some(d) if d > distance => {
-                            min_distance = Some(distance);
-                            best_pair = Some((i, j));
-                        }
-                        Some(_) => {}
-                    }
-                }
-            }
-            last_ids = best_pair;
-            let (i, j) = best_pair.unwrap();
+            let (i, j, _distance) = distances.pop().unwrap();
             let groupid_i = group_id.get(&i).unwrap();
             let groupid_j = group_id.get(&j).unwrap();
+            if groupid_i == groupid_j {
+                continue;
+            }
+            last_ids = Some((i, j));
             // Merge groups
-            if groupid_i != groupid_j {
-                let target_id = std::cmp::min(*groupid_i, *groupid_j);
-                let source_id = std::cmp::max(*groupid_i, *groupid_j);
-                let s = groups.insert(source_id, HashSet::new()).unwrap();
-                let e = groups.entry(target_id).or_default();
-                for v in s {
-                    e.insert(v);
-                    group_id.insert(v, target_id);
-                }
-            } else {
-                panic!();
+            let target_id = std::cmp::min(*groupid_i, *groupid_j);
+            let source_id = std::cmp::max(*groupid_i, *groupid_j);
+            let s = groups.insert(source_id, HashSet::new()).unwrap();
+            let e = groups.entry(target_id).or_default();
+            for v in s {
+                e.insert(v);
+                group_id.insert(v, target_id);
             }
             if groups
                 .iter()
