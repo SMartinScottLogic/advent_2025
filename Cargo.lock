@@ -151,6 +151,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "day10"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "itertools",
+ "lazy_static",
+ "memoize",
+ "pathfinding",
+ "regex",
+ "tracing",
+ "tracing-test",
+ "utils",
+]
+
+[[package]]
 name = "day2"
 version = "0.1.0"
 dependencies = [
