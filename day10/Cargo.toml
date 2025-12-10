@@ -12,6 +12,7 @@ lazy_static = {workspace = true}
 pathfinding = {workspace = true}
 itertools = {workspace = true}
 memoize = {workspace = true}
+good_lp = { version = "1.14.2", features = ["highs"], default-features = false }
 
 [dependencies.utils]
 path = "../utils"
