@@ -1,7 +1,5 @@
-use nalgebra::{DMatrix, SMatrix, matrix, vector};
-use z3::{Config, Context, SatResult, ast};
 use std::{
-    collections::VecDeque,
+    collections::{HashMap, VecDeque},
     io::{BufRead, BufReader},
 };
 #[allow(unused_imports)]
@@ -13,7 +11,7 @@ pub type ResultType = u64;
 pub(crate) struct Machine {
     lights: String,
     buttons: Vec<Vec<usize>>,
-    joltage: String,
+    joltage: Vec<usize>,
 }
 #[derive(Debug, Default)]
 pub struct Solution {
@@ -60,6 +58,9 @@ impl<T: std::io::Read> TryFrom<BufReader<T>> for Solution {
                             .skip(1)
                             .take(part.len() - 2)
                             .collect::<String>()
+                            .split(',')
+                            .map(|v| v.parse::<usize>().unwrap())
+                            .collect::<Vec<_>>();
                     }
                     c => panic!("unexpected {}", c),
                 }
@@ -70,6 +71,7 @@ impl<T: std::io::Read> TryFrom<BufReader<T>> for Solution {
         Ok(solution)
     }
 }
+
 impl utils::Solution for Solution {
     type Result = anyhow::Result<ResultType>;
     fn analyse(&mut self, _is_full: bool) {}
@@ -78,7 +80,7 @@ impl utils::Solution for Solution {
         let mut total = 0;
         for machine in &self.machines {
             let presses = fewest_presses_lights(machine);
-            info!("{} for {:?}", presses, machine);
+            debug!("{} for {:?}", presses, machine);
             total += presses;
         }
         Ok(total as ResultType)
@@ -88,9 +90,7 @@ impl utils::Solution for Solution {
         let mut total = 0;
         for machine in self.machines.iter().take(10000) {
             let presses = solve_p2(machine);
-            info!("{} for {:?}", presses, machine);
-            //let presses = fewest_presses_joltage(machine);
-            //info!("{} for {:?}", presses, machine);
+            debug!("{} for {:?}", presses, machine);
 
             total += presses;
         }
@@ -127,9 +127,8 @@ fn fewest_presses_lights(machine: &Machine) -> usize {
 }
 
 fn solve_p2(machine: &Machine) -> usize {
-    let buttons = machine.buttons;
-    let jolts = machine.joltage.split(',')
-        .map(|v| v.parse::<u64>().unwrap()).collect::<Vec<_>>();
+    let buttons = &machine.buttons;
+    let jolts = machine.joltage.clone();
 
     use good_lp::*;
     let mut vars = variables!();
@@ -144,113 +143,29 @@ fn solve_p2(machine: &Machine) -> usize {
             exprs[x] += press_vars[i];
         }
     }
-    for (e, &j) in exprs.into_iter().zip(jolts) {
+    for (e, j) in exprs.into_iter().zip(jolts) {
         problem.add_constraint(e.eq(j as f64));
     }
     let sol = problem.solve().unwrap();
-    press_vars.iter().map(|&v| sol.value(v)).sum::<f64>() as _
+
+    // Validate
+    let mut outcome = HashMap::new();
+    let mut total = 0;
+    for (i, p) in press_vars.iter().map(|&v| sol.value(v)).enumerate() {
+        let op = p;
+        let p = (p + 0.9) as isize;
+        debug!("{}: {} vs {}", i, p, op);
+        assert!(p >= 0);
+        for j in buttons.get(i).unwrap() {
+            *outcome.entry(j).or_insert(0) += p as usize;
+        }
+        total += p;
+    }
+    let mut result = Vec::new();
+    for i in 0..machine.joltage.len() {
+        result.push(*outcome.get(&i).unwrap());
+    }
+    assert_eq!(result, machine.joltage);
+
+    total as usize
 }
-
-// fn fewest_presses_joltage(machine: &Machine) -> u64 {
-//     // https://docs.rs/z3/latest/z3/
-//     // https://github.com/jonathanpaulson/AdventOfCode/blob/master/2025/10.py
-// //Z3
-// let ctx = Context::new(&Config::new());
-// let solver = Solver::new(ctx);
-
-// // Buttons
-// let buttons = machine.buttons
-//     .iter()
-//     .enumerate()
-//     .map(|(id, _)| ast::Int::new_const(&ctx, format!("presses_{}",id+1)))
-//     .collect::<Vec<_>>();
-// for (i, joltage) in machine
-//         .joltage
-//         .split(',')
-//         .map(|v| v.parse::<u64>().unwrap())
-//         .enumerate() {
-//             let terms = 0;
-//            for (button_id, button_effect) in machine.buttons.iter().enumerate() {
-//             if button_effect.contains(i) {
-//                 terms = terms + buttons.get(button_id).unwrap();
-//             }
-//            } 
-//            solver.assert(terms.eq(joltage));
-// }
-// match solution.check() {
-//     SatResult::Sat => {
-//         let model = solver.get_model().unwrap();
-//         debug!(model = ?model);
-//     }
-//     _ => panic!()
-// }
-// 0
-//     // // nalgebra
-//     // let m =
-//     //     matrix![button_a.x() as f64, button_b.x() as f64; button_a.y() as f64, button_b.y() as f64];
-//     // match m.try_inverse() {
-//     //     Some(inv) => {
-//     //         let r = inv * vector![prize.x() as f64, prize.y() as f64];
-//     //         debug!(?r);
-//     //         if r.iter().all(|f| (f - f.round()).abs() < 1e-3) {
-//     //             let r = r.transpose() * vector![3.0, 1.0];
-//     //             debug!(?r);
-//     //             Some(r.magnitude().round() as u64)
-//     //         } else {
-//     //             None
-//     //         }
-//     //     }
-//     //     None => None,
-//     // }
-
-//     // let target = machine
-//     //     .joltage
-//     //     .split(',')
-//     //     .map(|v| v.parse::<u64>().unwrap())
-//     //     .collect::<Vec<_>>();
-//     // let joltage = "0".repeat(machine.lights.len());
-//     // let joltage = joltage.chars().map(|_| 0).collect::<Vec<_>>();
-//     // fewest_presses_joltage_r(machine, &target, 0, 0, &joltage).unwrap()
-//     // let mut queue = VecDeque::new();
-//     // queue.push_back((0_u64, 0, joltage));
-
-//     // let mut min_presses = u64::MAX;
-//     // while let Some((presses, button, joltage)) = queue.pop_front() {
-//     //     if joltage == target {
-//     //         debug!("found for {}", presses);
-//     //         if presses < min_presses {
-//     //             min_presses = presses;
-//     //         }
-//     //         continue;
-//     //     }
-
-//     //     info!(
-//     //         "min_presses: {}, presses: {}, button: {}, joltage: {:?}",
-//     //         min_presses, presses, button, joltage
-//     //     );
-//     //     if let Some(lights) = machine.buttons.get(button) {
-//     //         let mut max_presses = u64::MAX;
-//     //         for light in lights {
-//     //             let diff = target.get(*light).unwrap() - joltage.get(*light).unwrap();
-//     //             max_presses = std::cmp::min(max_presses, diff);
-//     //         }
-//     //         debug!(max_presses);
-//     //         for press in (0..=max_presses).rev() {
-//     //             let mut b_joltage = joltage.clone();
-
-//     //             for light in lights {
-//     //                 b_joltage[*light] += press;
-//     //             }
-//     //             if b_joltage
-//     //                 .iter()
-//     //                 .zip(target.iter())
-//     //                 .any(|(actual, target)| actual > target)
-//     //             {
-//     //                 panic!();
-//     //             }
-//     //             queue.push_back((presses + press, button + 1, b_joltage));
-//     //         }
-//     //     }
-//     // }
-//     // min_presses
-// }
