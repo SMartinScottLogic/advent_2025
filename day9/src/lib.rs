@@ -182,11 +182,9 @@ impl utils::Solution for Solution {
 }
 
 fn is_permitted(matrix: &Matrix<char>, tile1: &CompactTile, tile2: &CompactTile) -> bool {
-    for x in min(tile1.compact.x(), tile2.compact.x())
-        ..=max(tile1.compact.x(), tile2.compact.x())
-    {
-        for y in min(tile1.compact.y(), tile2.compact.y())
-            ..=max(tile1.compact.y(), tile2.compact.y())
+    for x in min(tile1.compact.x(), tile2.compact.x())..=max(tile1.compact.x(), tile2.compact.x()) {
+        for y in
+            min(tile1.compact.y(), tile2.compact.y())..=max(tile1.compact.y(), tile2.compact.y())
         {
             if let Some('O') = matrix.get(x, y) {
                 return false;
