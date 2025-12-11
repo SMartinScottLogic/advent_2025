@@ -1,3 +1,4 @@
+use memoize::memoize;
 use std::{
     collections::HashMap,
     io::{BufRead, BufReader},
@@ -43,7 +44,7 @@ impl utils::Solution for Solution {
 
     fn answer_part1(&self, is_full: bool) -> Self::Result {
         let r = if is_full {
-            num_paths(&self.devices, "you", "out")
+            num_paths_part1(&self.devices, "you", "out")
         } else {
             0
         };
@@ -51,14 +52,14 @@ impl utils::Solution for Solution {
         Ok(r as ResultType)
     }
 
-    fn answer_part2(&self, _is_full: bool) -> Self::Result {
-        let r = num_paths(&self.devices, "svr", "dac");
+    fn answer_part2(&self, is_full: bool) -> Self::Result {
+        let r = num_paths_part2(&self.devices, is_full, "svr".to_string(), false, false);
         // Implement for problem
         Ok(r as ResultType)
     }
 }
 
-fn num_paths(devices: &HashMap<String, Vec<String>>, current: &str, target: &str) -> usize {
+fn num_paths_part1(devices: &HashMap<String, Vec<String>>, current: &str, target: &str) -> usize {
     if current == target {
         1
     } else {
@@ -67,7 +68,41 @@ fn num_paths(devices: &HashMap<String, Vec<String>>, current: &str, target: &str
             Some(targets) => {
                 let mut count = 0;
                 for next in targets {
-                    count += num_paths(devices, next, target);
+                    count += num_paths_part1(devices, next, target);
+                }
+                count
+            }
+        }
+    }
+}
+
+#[memoize(Ignore:devices)]
+fn num_paths_part2(
+    devices: &HashMap<String, Vec<String>>,
+    is_full: bool,
+    current: String,
+    seen_dac: bool,
+    seen_fft: bool,
+) -> usize {
+    if current == "out" {
+        if seen_dac && seen_fft {
+            1
+        } else {
+            0
+        }
+    } else {
+        match devices.get(&current) {
+            None => 0,
+            Some(targets) => {
+                let mut count = 0;
+                for next in targets {
+                    count += num_paths_part2(
+                        devices,
+                        is_full,
+                        next.to_owned(),
+                        seen_dac || current == "dac",
+                        seen_fft || current == "fft",
+                    );
                 }
                 count
             }
